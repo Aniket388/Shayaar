@@ -6,7 +6,7 @@ import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import ImageClip, AudioFileClip
+from moviepy.editor import ImageClip, AudioFileClip, VideoFileClip, CompositeVideoClip, ColorClip
 
 print("Waking up Shayaar Bot...")
 
@@ -40,12 +40,13 @@ if not job_row:
 print(f"Found a Shayari on row {job_row}! Locking it...")
 sheet_queue.update_cell(job_row, 2, "PROCESSING")
 
-# --- PHASE D: MEDIA ENGINEERING (THE CINEMATIC ARTIST) ---
-print("Drawing the beautiful text on a canvas...")
-
-# 1. Canvas (Cinematic rich dark background, not plain black)
+# --- PHASE D: MEDIA ENGINEERING (THE CINEMATIC COMPOSITOR) ---
+print("Designing the transparent text layer...")
 width, height = 1080, 1920
-img = Image.new('RGB', (width, height), color=(12, 12, 15))
+
+# 1. Create a transparent canvas, but fill it with a 40% dark overlay.
+# This makes any background video underneath look moody and helps the white text pop!
+img = Image.new('RGBA', (width, height), color=(0, 0, 0, 120))
 draw = ImageDraw.Draw(img)
 
 # 2. Smart Text Wrapping
@@ -56,10 +57,9 @@ for line in raw_lines:
         formatted_lines.extend(textwrap.wrap(line, width=30))
     else:
         formatted_lines.append(line)
-
 final_text = "\n".join(formatted_lines)
 
-# 3. Dynamic Font Scaling (Shrink-to-fit)
+# 3. Dynamic Font Scaling
 font_size = 90
 font_path = "assets/fonts/Lora-VariableFont_wght.ttf"
 
@@ -68,8 +68,6 @@ while font_size > 30:
     bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center")
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
-    
-    # Keep it safely away from the edges (200px padding on left/right)
     if text_w < (width - 200) and text_h < (height - 500):
         break
     font_size -= 4
@@ -77,60 +75,80 @@ while font_size > 30:
 x = (width - text_w) / 2
 y = (height - text_h) / 2
 
-# 4. Cinematic Drop Shadow
+# 4. Draw Drop Shadow & Text
 shadow_offset = 5
-draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0), align="center", spacing=45)
+draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=45)
+draw.multiline_text((x, y), final_text, font=font, fill=(245, 245, 245, 255), align="center", spacing=45)
 
-# 5. Crisp Off-White Text
-draw.multiline_text((x, y), final_text, font=font, fill=(240, 240, 240), align="center", spacing=45)
-
-# 6. Subtle Watermark at the bottom
+# 5. Watermark
 try:
     watermark_font = ImageFont.truetype(font_path, 35)
     wm_text = "Shayaar"
-    wm_bbox = draw.textbbox((0, 0), wm_text, font=watermark_font)
-    wm_w = wm_bbox[2] - wm_bbox[0]
-    draw.text(((width - wm_w) / 2, height - 150), wm_text, font=watermark_font, fill=(100, 100, 100))
+    wm_w = draw.textbbox((0, 0), wm_text, font=watermark_font)[2]
+    draw.text(((width - wm_w) / 2, height - 150), wm_text, font=watermark_font, fill=(150, 150, 150, 200))
 except:
     pass
 
-img.save("temp_frame.png")
-print("Image created! Now mixing audio and rendering the Reel...")
+img.save("text_layer.png")
+print("Text layer ready! Mixing video, audio, and elegant fades...")
 
-# --- NEW AUDIO LOGIC ---
+# --- VIDEO BACKGROUND LOGIC ---
+target_duration = 30
+bg_dir = "assets/backgrounds/"
+
+# Check if you uploaded any videos
+try:
+    bg_files = [f for f in os.listdir(bg_dir) if f.endswith(('.mp4', '.mov'))]
+except:
+    bg_files = []
+
+if bg_files:
+    random_bg = random.choice(bg_files)
+    print(f"Using animated background: {random_bg}")
+    bg_clip = VideoFileClip(os.path.join(bg_dir, random_bg))
+    
+    # Loop it if it's too short, or cut it if it's too long
+    if bg_clip.duration < target_duration:
+        from moviepy.video.fx.all import loop
+        bg_clip = bg_clip.fx(loop, duration=target_duration)
+    else:
+        bg_clip = bg_clip.subclip(0, target_duration)
+    
+    # Force it to fit Instagram's 1080x1920 size just in case it's the wrong shape
+    bg_clip = bg_clip.resize(newsize=(1080, 1920))
+else:
+    print("No background video found. Using classy dark solid color.")
+    bg_clip = ColorClip(size=(1080, 1920), color=[15, 15, 18], duration=target_duration)
+
+# --- APPLY ANIMATION (ELEGANT TEXT FADE-IN) ---
+# The text will slowly fade into existence over 3 seconds
+text_clip = ImageClip("text_layer.png").set_duration(target_duration).crossfadein(3.0)
+
+# Merge the background and the animated text
+final_video = CompositeVideoClip([bg_clip, text_clip])
+
+# --- AUDIO LOGIC ---
 music_dir = "assets/music/"
 all_music = [f for f in os.listdir(music_dir) if f.endswith('.mp3')]
 
-if not all_music:
-    print("ERROR: No .mp3 files found!")
-    exit(1)
+if all_music:
+    random_track = random.choice(all_music)
+    audio = AudioFileClip(os.path.join(music_dir, random_track))
+    
+    if audio.duration > target_duration:
+        max_start = audio.duration - target_duration
+        random_start = random.uniform(0, max_start)
+        audio = audio.subclip(random_start, random_start + target_duration)
+    
+    audio = audio.audio_fadein(2.0).audio_fadeout(3.0)
+    final_video = final_video.set_audio(audio)
 
-# Pick a random song
-random_track = random.choice(all_music)
-print(f"Selected Track: {random_track}")
-audio = AudioFileClip(os.path.join(music_dir, random_track))
+# Fade the entire video in and out beautifully
+final_video = final_video.fadein(1.0).fadeout(2.0)
 
-# Set exact duration to 30 seconds
-target_duration = 30
-
-if audio.duration > target_duration:
-    # Pick a random starting point in the song!
-    max_start = audio.duration - target_duration
-    random_start = random.uniform(0, max_start)
-    audio = audio.subclip(random_start, random_start + target_duration)
-else:
-    # If the song is shorter than 30s, use whatever length it is
-    target_duration = audio.duration
-
-# Smooth fade in and fade out
-audio = audio.audio_fadein(1.0).audio_fadeout(2.0)
-
-# Merge video and audio
-video = ImageClip("temp_frame.png").set_duration(target_duration)
-final_video = video.set_audio(audio)
-
+# Render the masterpiece
 final_video.write_videofile("shayaar_reel.mp4", fps=24, codec="libx264", audio_codec="aac", preset="ultrafast")
 
-print("Video rendered successfully!")
+print("Masterpiece rendered successfully!")
 sheet_queue.update_cell(job_row, 2, "VIDEO_READY")
 print("Going back to sleep.")
