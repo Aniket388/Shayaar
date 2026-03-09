@@ -80,14 +80,7 @@ shadow_offset = 5
 draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=45)
 draw.multiline_text((x, y), final_text, font=font, fill=(245, 245, 245, 255), align="center", spacing=45)
 
-# 5. Watermark
-try:
-    watermark_font = ImageFont.truetype(font_path, 35)
-    wm_text = "Shayaar"
-    wm_w = draw.textbbox((0, 0), wm_text, font=watermark_font)[2]
-    draw.text(((width - wm_w) / 2, height - 150), wm_text, font=watermark_font, fill=(150, 150, 150, 200))
-except:
-    pass
+
 
 img.save("text_layer.png")
 print("Text layer ready! Mixing video, audio, and elegant fades...")
