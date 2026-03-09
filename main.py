@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import textwrap
+import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from PIL import Image, ImageDraw, ImageFont
@@ -39,65 +40,93 @@ if not job_row:
 print(f"Found a Shayari on row {job_row}! Locking it...")
 sheet_queue.update_cell(job_row, 2, "PROCESSING")
 
-# --- PHASE D: MEDIA ENGINEERING (THE PREMIUM ARTIST) ---
+# --- PHASE D: MEDIA ENGINEERING (THE CINEMATIC ARTIST) ---
 print("Drawing the beautiful text on a canvas...")
 
-# 1. Create a 1080x1920 canvas (Slightly dark aesthetic gray instead of harsh pitch black)
+# 1. Canvas (Cinematic rich dark background, not plain black)
 width, height = 1080, 1920
-img = Image.new('RGB', (width, height), color=(15, 15, 18))
+img = Image.new('RGB', (width, height), color=(12, 12, 15))
 draw = ImageDraw.Draw(img)
 
-# 2. Smart Text Wrapping (Respects your original Telegram line breaks!)
+# 2. Smart Text Wrapping
 raw_lines = job_text.split('\n')
 formatted_lines = []
 for line in raw_lines:
-    # Only wrap a line if it is insanely long, otherwise leave it exactly as you wrote it
-    if len(line) > 35:
-        formatted_lines.extend(textwrap.wrap(line, width=35))
+    if len(line) > 30:
+        formatted_lines.extend(textwrap.wrap(line, width=30))
     else:
         formatted_lines.append(line)
 
 final_text = "\n".join(formatted_lines)
 
-# 3. Dynamic Font Scaling (Shrink-to-fit algorithm)
-font_size = 85
+# 3. Dynamic Font Scaling (Shrink-to-fit)
+font_size = 90
 font_path = "assets/fonts/Lora-VariableFont_wght.ttf"
 
-# Keep shrinking the font until it fits comfortably inside the screen
 while font_size > 30:
     font = ImageFont.truetype(font_path, font_size)
     bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center")
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
     
-    # If it fits within our safe margins (150px padding on the sides), stop shrinking!
-    if text_w < (width - 300) and text_h < (height - 400):
+    # Keep it safely away from the edges (200px padding on left/right)
+    if text_w < (width - 200) and text_h < (height - 500):
         break
     font_size -= 4
 
-# Calculate exact dead-center coordinates
 x = (width - text_w) / 2
 y = (height - text_h) / 2
 
-# 4. Draw a subtle Drop Shadow for a premium feel
-shadow_offset = 4
-draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0), align="center", spacing=40)
+# 4. Cinematic Drop Shadow
+shadow_offset = 5
+draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0), align="center", spacing=45)
 
-# 5. Draw the actual crisp text in off-white
-draw.multiline_text((x, y), final_text, font=font, fill=(245, 245, 245), align="center", spacing=40)
+# 5. Crisp Off-White Text
+draw.multiline_text((x, y), final_text, font=font, fill=(240, 240, 240), align="center", spacing=45)
+
+# 6. Subtle Watermark at the bottom
+try:
+    watermark_font = ImageFont.truetype(font_path, 35)
+    wm_text = "Shayaar"
+    wm_bbox = draw.textbbox((0, 0), wm_text, font=watermark_font)
+    wm_w = wm_bbox[2] - wm_bbox[0]
+    draw.text(((width - wm_w) / 2, height - 150), wm_text, font=watermark_font, fill=(100, 100, 100))
+except:
+    pass
 
 img.save("temp_frame.png")
-
 print("Image created! Now mixing audio and rendering the Reel...")
 
-# 6. Bring in MoviePy to make the video
-audio = AudioFileClip("assets/music/Lover.mp3")
+# --- NEW AUDIO LOGIC ---
+music_dir = "assets/music/"
+all_music = [f for f in os.listdir(music_dir) if f.endswith('.mp3')]
 
-if audio.duration > 12:
-    audio = audio.subclip(0, 12)
-audio = audio.audio_fadeout(1.5)
+if not all_music:
+    print("ERROR: No .mp3 files found!")
+    exit(1)
 
-video = ImageClip("temp_frame.png").set_duration(12)
+# Pick a random song
+random_track = random.choice(all_music)
+print(f"Selected Track: {random_track}")
+audio = AudioFileClip(os.path.join(music_dir, random_track))
+
+# Set exact duration to 30 seconds
+target_duration = 30
+
+if audio.duration > target_duration:
+    # Pick a random starting point in the song!
+    max_start = audio.duration - target_duration
+    random_start = random.uniform(0, max_start)
+    audio = audio.subclip(random_start, random_start + target_duration)
+else:
+    # If the song is shorter than 30s, use whatever length it is
+    target_duration = audio.duration
+
+# Smooth fade in and fade out
+audio = audio.audio_fadein(1.0).audio_fadeout(2.0)
+
+# Merge video and audio
+video = ImageClip("temp_frame.png").set_duration(target_duration)
 final_video = video.set_audio(audio)
 
 final_video.write_videofile("shayaar_reel.mp4", fps=24, codec="libx264", audio_codec="aac", preset="ultrafast")
