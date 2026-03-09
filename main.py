@@ -44,7 +44,7 @@ if updates:
             user_id = update['message']['from']['id']
             text = update['message']['text']
             if user_id == ADMIN_ID:
-                print(f"Authorized! Adding to sheet: {text[:20]}...")
+                print(f"Authorized! Adding to sheet...")
                 sheet_queue.append_row([text, "PENDING", ""])
             else:
                 print(f"Ignored message from ID: {user_id}")
@@ -54,7 +54,7 @@ if updates:
             sheet_config.update_cell(cell.row, cell.col + 1, highest_offset)
         except:
             sheet_config.append_row(["last_telegram_offset", highest_offset])
-        print("Updated the Config sheet with new Telegram offset.")
+        print("Updated the Config sheet.")
 else:
     print("No new messages from Telegram.")
 
@@ -80,43 +80,44 @@ sheet_queue.update_cell(job_row, 2, "PROCESSING")
 # --- PHASE D: MEDIA ENGINEERING (THE CINEMATIC COMPOSITOR) ---
 print("Designing the transparent text layer...")
 width, height = 1080, 1920
-img = Image.new('RGBA', (width, height), color=(0, 0, 0, 120))
+
+# FIX 1: Darker overlay so text is highly readable
+img = Image.new('RGBA', (width, height), color=(0, 0, 0, 160)) 
 draw = ImageDraw.Draw(img)
 
-# FIX 1: The Golden Ratio for Vertical Reels (Wrap at 28 chars so it never hits the edges)
-raw_lines = job_text.split('\n')
+# FIX 2: Better Poetry Wrapping
+raw_lines = job_text.strip().split('\n')
 formatted_lines = []
 for line in raw_lines:
-    if len(line) > 28:  
-        formatted_lines.extend(textwrap.wrap(line, width=28))
-    else:
-        formatted_lines.append(line)
+    # Use fill to handle very long lines, but keep short ones exactly as typed
+    wrapped = textwrap.fill(line, width=32)
+    formatted_lines.append(wrapped)
 final_text = "\n".join(formatted_lines)
 
-font_size = 100
+font_size = 90
+min_font_size = 40  # FIX 3: Never shrink below 40 (keeps it readable)
 font_path = "assets/fonts/Lora-VariableFont_wght.ttf"
-dynamic_spacing = 20 
+spacing = 25
 
-# FIX 2: Bulletproof Shrink-to-Fit (Allow it to shrink as small as size 15 if necessary)
-while font_size > 15:
+while font_size > min_font_size:
     font = ImageFont.truetype(font_path, font_size)
-    dynamic_spacing = max(10, int(font_size * 0.3)) 
+    spacing = int(font_size * 0.3)
     
-    bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center", spacing=dynamic_spacing)
+    bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center", spacing=spacing)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
     
-    # Must fit safely inside the screen margins
-    if text_w < (width - 280) and text_h < (height - 600):
+    if text_w < (width - 150) and text_h < (height - 400):
         break
     font_size -= 2
 
 x = (width - text_w) / 2
-y = ((height - text_h) / 2) - 150  
+y = (height - text_h) / 2 # True visual center
 
-shadow_offset = max(3, int(font_size * 0.06))  
-draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=dynamic_spacing)
-draw.multiline_text((x, y), final_text, font=font, fill=(245, 245, 245, 255), align="center", spacing=dynamic_spacing)
+# Stronger, scaled drop shadow for readability
+shadow_offset = max(4, int(font_size * 0.08))
+draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=spacing)
+draw.multiline_text((x, y), final_text, font=font, fill=(250, 250, 250, 255), align="center", spacing=spacing)
 
 img.save("text_layer.png")
 print("Text layer ready! Mixing video, audio, and elegant fades...")
@@ -139,10 +140,10 @@ if bg_files:
         bg_clip = bg_clip.subclip(0, target_duration)
     bg_clip = bg_clip.resize(newsize=(1080, 1920))
 else:
-    print("No background video found. Using classy dark solid color.")
+    print("No background video found.")
     bg_clip = ColorClip(size=(1080, 1920), color=[15, 15, 18], duration=target_duration)
 
-text_clip = ImageClip("text_layer.png").set_duration(target_duration).crossfadein(3.0)
+text_clip = ImageClip("text_layer.png").set_duration(target_duration).crossfadein(2.5)
 final_video = CompositeVideoClip([bg_clip, text_clip])
 
 music_dir = "assets/music/"
