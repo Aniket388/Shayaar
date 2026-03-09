@@ -1,0 +1,29 @@
+name: Shayaar Bot Sync
+
+on:
+  workflow_dispatch: # This is the magic button that lets us run it manually!
+  schedule:
+    - cron: '0 12 * * *' # This will later run it automatically once a day
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Grab the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install tools
+        run: pip install -r requirements.txt
+
+      - name: Run the Brain (main.py)
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_JSON: ${{ secrets.GOOGLE_JSON }}
+        run: python main.py
