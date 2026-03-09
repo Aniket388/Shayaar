@@ -1,9 +1,9 @@
 name: Shayaar Bot Sync
 
 on:
-  workflow_dispatch: # This is the magic button that lets us run it manually!
+  workflow_dispatch: # Manual trigger
   schedule:
-    - cron: '0 12 * * *' # This will later run it automatically once a day
+    - cron: '0 12 * * *' # Runs once a day at 12:00 UTC
 
 jobs:
   run-bot:
@@ -27,3 +27,9 @@ jobs:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GOOGLE_JSON: ${{ secrets.GOOGLE_JSON }}
         run: python main.py
+
+      - name: Save the Reel for me to download
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-first-reel
+          path: shayaar_reel.mp4
