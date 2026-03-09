@@ -83,33 +83,40 @@ width, height = 1080, 1920
 img = Image.new('RGBA', (width, height), color=(0, 0, 0, 120))
 draw = ImageDraw.Draw(img)
 
+# FIX 1: Less aggressive wrapping. It now respects your Telegram line breaks!
 raw_lines = job_text.split('\n')
 formatted_lines = []
 for line in raw_lines:
-    if len(line) > 30:
-        formatted_lines.extend(textwrap.wrap(line, width=30))
+    if len(line) > 38:  # Increased wrap width
+        formatted_lines.extend(textwrap.wrap(line, width=38))
     else:
         formatted_lines.append(line)
 final_text = "\n".join(formatted_lines)
 
 font_size = 90
 font_path = "assets/fonts/Lora-VariableFont_wght.ttf"
+dynamic_spacing = 20 
 
+# FIX 2: Smarter Shrink-to-Fit & Dynamic Spacing
 while font_size > 30:
     font = ImageFont.truetype(font_path, font_size)
-    bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center")
+    dynamic_spacing = int(font_size * 0.3)  # Spacing scales down with the text!
+    
+    bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center", spacing=dynamic_spacing)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
-    if text_w < (width - 200) and text_h < (height - 500):
+    
+    # Keeping safe margins for Instagram
+    if text_w < (width - 250) and text_h < (height - 600):
         break
-    font_size -= 4
+    font_size -= 3
 
 x = (width - text_w) / 2
-y = ((height - text_h) / 2) - 150
+y = ((height - text_h) / 2) - 150  # Optical center nudge!
 
-shadow_offset = 5
-draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=45)
-draw.multiline_text((x, y), final_text, font=font, fill=(245, 245, 245, 255), align="center", spacing=45)
+shadow_offset = max(3, int(font_size * 0.06))  # Shadow scales with font
+draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=dynamic_spacing)
+draw.multiline_text((x, y), final_text, font=font, fill=(245, 245, 245, 255), align="center", spacing=dynamic_spacing)
 
 img.save("text_layer.png")
 print("Text layer ready! Mixing video, audio, and elegant fades...")
