@@ -105,7 +105,7 @@ while font_size > 30:
     font_size -= 4
 
 x = (width - text_w) / 2
-y = (height - text_h) / 2
+y = ((height - text_h) / 2) - 150
 
 shadow_offset = 5
 draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=45)
