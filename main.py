@@ -162,6 +162,56 @@ if all_music:
 final_video = final_video.fadein(1.0).fadeout(2.0)
 final_video.write_videofile("shayaar_reel.mp4", fps=24, codec="libx264", audio_codec="aac", preset="ultrafast")
 
-print("Masterpiece rendered successfully!")
-sheet_queue.update_cell(job_row, 2, "VIDEO_READY")
-print("Going back to sleep.")
+print("Masterpiece rendered! Uploading to temporary server for Meta...")
+
+# --- PHASE E: PUBLISH TO INSTAGRAM ---
+try:
+    META_TOKEN = os.environ['META_TOKEN'].strip()
+    INSTA_ID = os.environ['INSTA_ID'].strip()
+    
+    # 1. Host the video temporarily so Meta can see it
+    import time
+    files = {'file': open('shayaar_reel.mp4', 'rb')}
+    upload_res = requests.post('https://tmpfiles.org/api/v1/upload', files=files).json()
+    video_url = upload_res['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
+    
+    # 2. Tell Instagram to download it as a Reel
+    print("Sending Reel to Instagram...")
+    caption = "New Shayari ✨\n\n#shayari #poetry #ghalib #shayaarbot #quotes"
+    url_create = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media"
+    payload = {
+        'video_url': video_url,
+        'caption': caption,
+        'media_type': 'REELS',
+        'access_token': META_TOKEN
+    }
+    res_create = requests.post(url_create, data=payload).json()
+    creation_id = res_create.get('id')
+    
+    if not creation_id:
+        print("Meta rejected the video upload:", res_create)
+    else:
+        print(f"Container created ({creation_id}). Waiting for Meta to process audio/video...")
+        time.sleep(30) # Wait 30 seconds for Instagram's servers to process the file
+        
+        # 3. Publish it!
+        print("Publishing to your feed...")
+        url_publish = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media_publish"
+        payload_publish = {
+            'creation_id': creation_id,
+            'access_token': META_TOKEN
+        }
+        res_publish = requests.post(url_publish, data=payload_publish).json()
+        
+        if 'id' in res_publish:
+            print("SUCCESS! 🚀 Reel published to Instagram!")
+            sheet_queue.update_cell(job_row, 2, "PUBLISHED")
+        else:
+            print("Error publishing:", res_publish)
+            sheet_queue.update_cell(job_row, 2, "IG_ERROR")
+
+except Exception as e:
+    print(f"Instagram upload failed: {e}")
+    sheet_queue.update_cell(job_row, 2, "VIDEO_READY_NO_IG")
+
+print("Pipeline Complete. Going back to sleep.")
