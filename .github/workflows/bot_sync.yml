@@ -26,6 +26,8 @@ jobs:
           TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           GOOGLE_JSON: ${{ secrets.GOOGLE_JSON }}
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+          INSTA_ID: ${{ secrets.INSTA_ID }}
         run: python main.py
 
       - name: Save the Reel for me to download
