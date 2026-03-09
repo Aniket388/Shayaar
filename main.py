@@ -77,45 +77,45 @@ if not job_row:
 print(f"Found a Shayari on row {job_row}! Locking it...")
 sheet_queue.update_cell(job_row, 2, "PROCESSING")
 
-# --- PHASE D: MEDIA ENGINEERING (THE CINEMATIC COMPOSITOR) ---
+# --- PHASE D: MEDIA ENGINEERING (THE BULLETPROOF COMPOSITOR) ---
 print("Designing the transparent text layer...")
 width, height = 1080, 1920
-
-# FIX 1: Darker overlay so text is highly readable
 img = Image.new('RGBA', (width, height), color=(0, 0, 0, 160)) 
 draw = ImageDraw.Draw(img)
 
-# FIX 2: Better Poetry Wrapping
-raw_lines = job_text.strip().split('\n')
+# FIX 1: Clean up accidental empty lines and wrap wider to save vertical space
+cleaned_text = "\n".join([line.strip() for line in job_text.strip().split('\n') if line.strip()])
+raw_lines = cleaned_text.split('\n')
 formatted_lines = []
 for line in raw_lines:
-    # Use fill to handle very long lines, but keep short ones exactly as typed
-    wrapped = textwrap.fill(line, width=32)
+    wrapped = textwrap.fill(line, width=38) # Uses horizontal space better
     formatted_lines.append(wrapped)
 final_text = "\n".join(formatted_lines)
 
 font_size = 90
-min_font_size = 40  # FIX 3: Never shrink below 40 (keeps it readable)
+min_font_size = 28 # Allows it to shrink small enough for massive poems
 font_path = "assets/fonts/Lora-VariableFont_wght.ttf"
-spacing = 25
+spacing = 20
 
 while font_size > min_font_size:
     font = ImageFont.truetype(font_path, font_size)
-    spacing = int(font_size * 0.3)
+    spacing = int(font_size * 0.25) # Tighter line spacing
     
     bbox = draw.multiline_textbbox((0, 0), final_text, font=font, align="center", spacing=spacing)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
     
-    if text_w < (width - 150) and text_h < (height - 400):
+    # Check if it fits safely within the Instagram borders
+    if text_w < (width - 150) and text_h < (height - 350):
         break
     font_size -= 2
 
 x = (width - text_w) / 2
-y = (height - text_h) / 2 # True visual center
 
-# Stronger, scaled drop shadow for readability
-shadow_offset = max(4, int(font_size * 0.08))
+# FIX 2: Top-Boundary Lock! Never let the text get pushed off the top of the screen
+y = max(200, (height - text_h) / 2)
+
+shadow_offset = max(3, int(font_size * 0.08))
 draw.multiline_text((x + shadow_offset, y + shadow_offset), final_text, font=font, fill=(0, 0, 0, 255), align="center", spacing=spacing)
 draw.multiline_text((x, y), final_text, font=font, fill=(250, 250, 250, 255), align="center", spacing=spacing)
 
