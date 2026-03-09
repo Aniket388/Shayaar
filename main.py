@@ -51,7 +51,7 @@ img = Image.new('RGB', (width, height), color=(0, 0, 0))
 draw = ImageDraw.Draw(img)
 
 # 2. Load your font and wrap the text so it fits the screen
-font = ImageFont.truetype("assets/fonts/type.ttf", 60)
+font = ImageFont.truetype("assets/fonts/Lora-VariableFont_wght.ttf", 60)
 wrapped_text = "\n".join(textwrap.wrap(job_text, width=30))
 
 # 3. Center the text mathematically
