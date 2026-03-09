@@ -1,71 +1,87 @@
 import os
 import json
 import requests
+import textwrap
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import ImageClip, AudioFileClip
 
 print("Waking up Shayaar Bot...")
 
-# 1. Load keys (and strip out any accidental invisible spaces!)
+# --- PHASE A & B: LOAD SECRETS & CHECK TELEGRAM ---
 TELEGRAM_TOKEN = os.environ['TELEGRAM_TOKEN'].strip()
 ADMIN_ID = int(os.environ['TELEGRAM_ADMIN_ID'].strip())
 SHEET_ID = os.environ['SHEET_ID'].strip()
 CREDS_DICT = json.loads(os.environ['GOOGLE_JSON'])
 
-# 2. Connect to Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(CREDS_DICT, scope)
 client = gspread.authorize(creds)
-
 sheet_queue = client.open_by_key(SHEET_ID).worksheet("Queue")
-sheet_config = client.open_by_key(SHEET_ID).worksheet("Config")
 
-# 3. Read the Config sheet
-try:
-    cell = sheet_config.find("last_telegram_offset")
-    last_offset = sheet_config.cell(cell.row, cell.col + 1).value
-    last_offset = int(last_offset) if last_offset else 0
-except:
-    last_offset = 0
+# (We are skipping the Telegram check in this run just to focus on making the video!)
 
-print(f"Checking for messages after offset: {last_offset}")
+# --- PHASE C: FIND A PENDING JOB ---
+print("Checking Queue for work...")
+records = sheet_queue.get_all_records()
+job_row = None
+job_text = ""
 
-# 4. Check Telegram for new messages
-url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={last_offset + 1}&timeout=10"
-response = requests.get(url).json()
+# Look for the first row that says PENDING
+for index, row in enumerate(records):
+    if row.get('Status') == 'PENDING':
+        job_row = index + 2  # +2 because row 1 is headers
+        job_text = row.get('Text')
+        break
 
-# -> NEW: Print exactly what Telegram says back so we can see it in the logs!
-print("Telegram answered with:", json.dumps(response, indent=2))
+if not job_row:
+    print("No PENDING jobs found. Sleeping.")
+    exit(0)
 
-updates = response.get("result", [])
+print(f"Found a Shayari on row {job_row}! Locking it...")
+sheet_queue.update_cell(job_row, 2, "PROCESSING")
 
-if not updates:
-    print("No new messages from Telegram.")
-else:
-    highest_offset = last_offset
+# --- PHASE D: MEDIA ENGINEERING (THE ARTIST) ---
+print("Drawing the text on a canvas...")
 
-    # 5. Process each message
-    for update in updates:
-        highest_offset = max(highest_offset, update['update_id'])
-        
-        if 'message' in update and 'text' in update['message']:
-            user_id = update['message']['from']['id']
-            text = update['message']['text']
-            
-            # 6. Security Check
-            if user_id == ADMIN_ID:
-                print(f"Authorized! Adding to sheet: {text}")
-                sheet_queue.append_row([text, "PENDING", ""])
-            else:
-                print(f"Intruder alert! Ignored message from ID: {user_id}")
+# 1. Create a 1080x1920 black image
+width, height = 1080, 1920
+img = Image.new('RGB', (width, height), color=(0, 0, 0))
+draw = ImageDraw.Draw(img)
 
-    # 7. Update offset
-    if highest_offset > last_offset:
-        try:
-            sheet_config.update_cell(cell.row, cell.col + 1, highest_offset)
-        except:
-            # If the cell doesn't exist yet, just add it
-            sheet_config.append_row(["last_telegram_offset", highest_offset])
-        print("Updated the Config sheet with new offset.")
+# 2. Load your font and wrap the text so it fits the screen
+font = ImageFont.truetype("assets/fonts/type.ttf", 60)
+wrapped_text = "\n".join(textwrap.wrap(job_text, width=30))
 
-print("Finished successfully. Going back to sleep.")
+# 3. Center the text mathematically
+bbox = draw.multiline_textbbox((0, 0), wrapped_text, font=font, align="center")
+text_w = bbox[2] - bbox[0]
+text_h = bbox[3] - bbox[1]
+x = (width - text_w) / 2
+y = (height - text_h) / 2
+
+# 4. Draw it!
+draw.multiline_text((x, y), wrapped_text, font=font, fill=(255, 255, 255), align="center", spacing=20)
+img.save("temp_frame.png")
+
+print("Image created! Now mixing audio and rendering the Reel...")
+
+# 5. Bring in MoviePy to make the video
+audio = AudioFileClip("assets/music/Lover.mp3")
+
+# Cut the audio to exactly 12 seconds and add a smooth fadeout
+if audio.duration > 12:
+    audio = audio.subclip(0, 12)
+audio = audio.audio_fadeout(1.5)
+
+# Combine the image and the audio
+video = ImageClip("temp_frame.png").set_duration(12)
+final_video = video.set_audio(audio)
+
+# Render the final .mp4 file (Using ultrafast to save GitHub's CPU)
+final_video.write_videofile("shayaar_reel.mp4", fps=24, codec="libx264", audio_codec="aac", preset="ultrafast")
+
+print("Video rendered successfully!")
+sheet_queue.update_cell(job_row, 2, "VIDEO_READY")
+print("Going back to sleep.")
