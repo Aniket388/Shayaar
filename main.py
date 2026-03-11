@@ -204,7 +204,7 @@ try:
         "Which friend needs this reminder today? 🤝"
     ]
     chosen_hook = random.choice(hooks)
-    caption = f"{chosen_hook}\n\n#shayari #poetry #ghalib #shayaarbot #quotes #urdupoetry #deepquotes #lofi #shayar"
+    caption = f"{chosen_hook}\n\n#shayari #poetry #ghalib #jaun-elia #quotes #urdupoetry #deepquotes #lofi #shayar"
     url_create = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media"
     payload = {
         'video_url': video_url,
