@@ -185,7 +185,26 @@ try:
     
     # 2. Tell Instagram to download it as a Reel
     print("Sending Reel to Instagram...")
-    caption = "New Shayari ✨\n\n#shayari #poetry #ghalib #shayaarbot #quotes"
+    hooks = [
+        "Do you agree with this? 👇",
+        "Tag someone who needs to read this today. 💔",
+        "Deep words. What are your thoughts? ✨",
+        "Some lines just hit different. 🥀",
+        "Save this so you don't forget it. 📌",
+        "What does this remind you of? 💭",
+        "Mention that one person in the comments. ❤️",
+        "Relatable? Drop a '💯' if you feel this.",
+        "Send this to someone who understands. 💌",
+        "Heartbreak or healing? Let me know below. 🌧️",
+        "Share this on your story if it speaks to you. 🎧",
+        "Who comes to mind when you read this? 🌙",
+        "Words that touch the soul. ✨ What's your favorite line?",
+        "Can you relate to this feeling? 🍂",
+        "Sometimes words say what the heart hides. 🥀",
+        "Which friend needs this reminder today? 🤝"
+    ]
+    chosen_hook = random.choice(hooks)
+    caption = f"{chosen_hook}\n\n#shayari #poetry #ghalib #shayaarbot #quotes #urdupoetry #deepquotes #lofi #shayar"
     url_create = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media"
     payload = {
         'video_url': video_url,
