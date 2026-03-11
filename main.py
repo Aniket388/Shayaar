@@ -83,13 +83,21 @@ width, height = 1080, 1920
 img = Image.new('RGBA', (width, height), color=(0, 0, 0, 160)) 
 draw = ImageDraw.Draw(img)
 
-# FIX 1: Clean up accidental empty lines and wrap wider to save vertical space
-cleaned_text = "\n".join([line.strip() for line in job_text.strip().split('\n') if line.strip()])
-raw_lines = cleaned_text.split('\n')
+
+# FIX 1: Smart Text Wrapping (Preserves Empty Lines for Stanzas!)
+raw_lines = job_text.strip().split('\n')
 formatted_lines = []
+
 for line in raw_lines:
-    wrapped = textwrap.fill(line, width=38) # Uses horizontal space better
-    formatted_lines.append(wrapped)
+    clean_line = line.strip()
+    if clean_line == "":
+        # If you left a blank line, keep it blank to separate paragraphs!
+        formatted_lines.append("") 
+    else:
+        # Otherwise, wrap the text normally so it fits on screen
+        wrapped = textwrap.fill(clean_line, width=38)
+        formatted_lines.append(wrapped)
+        
 final_text = "\n".join(formatted_lines)
 
 font_size = 90
