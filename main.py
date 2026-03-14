@@ -38,17 +38,25 @@ updates = response.get("result", [])
 
 if updates:
     highest_offset = last_offset
+    new_rows = [] # The magic box for batching
+    
     for update in updates:
         highest_offset = max(highest_offset, update['update_id'])
         if 'message' in update and 'text' in update['message']:
             user_id = update['message']['from']['id']
             text = update['message']['text']
             if user_id == ADMIN_ID:
-                print(f"Authorized! Adding to sheet...")
-                sheet_queue.append_row([text, "PENDING", ""])
+                print("Authorized! Boxing up a new Shayari...")
+                # Put it in the box instead of saving immediately
+                new_rows.append([text, "PENDING", ""])
             else:
                 print(f"Ignored message from ID: {user_id}")
     
+    # Send the entire box to Google Sheets all at once!
+    if new_rows:
+        print(f"Batch saving {len(new_rows)} Shayaris to Google Sheets...")
+        sheet_queue.append_rows(new_rows)
+        
     if highest_offset > last_offset:
         try:
             sheet_config.update_cell(cell.row, cell.col + 1, highest_offset)
