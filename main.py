@@ -227,7 +227,7 @@ try:
         print("Meta rejected the video upload:", res_create)
     else:
         print(f"Container created ({creation_id}). Waiting for Meta to process audio/video...")
-        time.sleep(30) # Wait 30 seconds for Instagram's servers to process the file
+        time.sleep(60) # Wait 60 seconds for Instagram's servers to process the file
         
         # 3. Publish it!
         print("Publishing to your feed...")
