@@ -179,7 +179,7 @@ if all_music:
         max_start = audio.duration - target_duration
         random_start = random.uniform(0, max_start)
         audio = audio.subclip(random_start, random_start + target_duration)
-    audio = audio.audio_fadein(2.0).audio_fadeout(3.0)
+    audio = audio.audio_fadein(1.0).audio_fadeout(1.0)
     final_video = final_video.set_audio(audio)
 
 final_video = final_video.fadein(1.0).fadeout(1.0)
