@@ -138,7 +138,14 @@ draw.multiline_text((x, y), final_text, font=font, fill=(250, 250, 250, 255), al
 img.save("text_layer.png")
 print("Text layer ready! Mixing video, audio, and elegant fades...")
 
-target_duration = 30
+# --- SMART DURATION CALCULATOR ---
+word_count = len(job_text.split())
+# 3 words/sec reading speed + 2s for fast fades + 2s to absorb emotion
+calculated_time = int(word_count / 3) + 4
+
+# Minimum 8 seconds, Maximum 25 seconds
+target_duration = max(8, min(calculated_time, 25))
+print(f"Shayari has {word_count} words. Setting video duration to {target_duration} seconds.")
 bg_dir = "assets/backgrounds/"
 try:
     bg_files = [f for f in os.listdir(bg_dir) if f.endswith(('.mp4', '.mov'))]
