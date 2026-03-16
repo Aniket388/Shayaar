@@ -159,7 +159,7 @@ else:
     print("No background video found.")
     bg_clip = ColorClip(size=(1080, 1920), color=[15, 15, 18], duration=target_duration)
 
-text_clip = ImageClip("text_layer.png").set_duration(target_duration).crossfadein(2.5)
+text_clip = ImageClip("text_layer.png").set_duration(target_duration).crossfadein(1.0)
 final_video = CompositeVideoClip([bg_clip, text_clip])
 
 music_dir = "assets/music/"
@@ -175,7 +175,7 @@ if all_music:
     audio = audio.audio_fadein(2.0).audio_fadeout(3.0)
     final_video = final_video.set_audio(audio)
 
-final_video = final_video.fadein(1.0).fadeout(2.0)
+final_video = final_video.fadein(1.0).fadeout(1.0)
 final_video.write_videofile("shayaar_reel.mp4", fps=24, codec="libx264", audio_codec="aac", preset="ultrafast")
 
 print("Masterpiece rendered! Uploading to temporary server for Meta...")
