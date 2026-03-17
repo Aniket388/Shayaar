@@ -187,16 +187,42 @@ final_video.write_videofile("shayaar_reel.mp4", fps=24, codec="libx264", audio_c
 
 print("Masterpiece rendered! Uploading to temporary server for Meta...")
 
+
 # --- PHASE E: PUBLISH TO INSTAGRAM ---
 try:
     META_TOKEN = os.environ['META_TOKEN'].strip()
     INSTA_ID = os.environ['INSTA_ID'].strip()
     
-    # 1. Host the video temporarily so Meta can see it
+    # 1. Host the video temporarily so Meta can see it (WITH BULLETPROOF RETRY)
     import time
-    files = {'file': open('shayaar_reel.mp4', 'rb')}
-    upload_res = requests.post('https://tmpfiles.org/api/v1/upload', files=files).json()
-    video_url = upload_res['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
+    print("Uploading to Catbox for Meta...")
+    video_url = None
+    
+    for attempt in range(3):
+        try:
+            print(f"Upload attempt {attempt+1}...")
+            with open('shayaar_reel.mp4', 'rb') as f:
+                files = {
+                    'reqtype': (None, 'fileupload'),
+                    'fileToUpload': f
+                }
+                res = requests.post('https://catbox.moe/user/api.php', files=files)
+                url = res.text.strip()
+
+            if url.startswith("https://"):
+                video_url = url
+                print(f"Success! Video hosted at: {video_url}")
+                break
+            else:
+                print(f"Invalid response from Catbox: {url}")
+                
+        except Exception as e:
+            print(f"Catbox upload exception, retrying... Error: {e}")
+            
+        time.sleep(5)
+
+    if not video_url:
+        raise Exception("Catbox upload failed completely after 3 retries. Aborting.")
     
     # 2. Tell Instagram to download it as a Reel
     print("Sending Reel to Instagram...")
@@ -220,6 +246,7 @@ try:
     ]
     chosen_hook = random.choice(hooks)
     caption = f"{chosen_hook}\n\n#shayari #poetry #ghalib #jaunelia #quotes #urdupoetry #deepquotes #lofi #shayar"
+    
     url_create = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media"
     payload = {
         'video_url': video_url,
@@ -227,11 +254,17 @@ try:
         'media_type': 'REELS',
         'access_token': META_TOKEN
     }
-    res_create = requests.post(url_create, data=payload).json()
+    
+    print("Initiating Meta Container Creation...")
+    res_create_raw = requests.post(url_create, data=payload)
+    print("Meta Raw Response (Create):", res_create_raw.text)
+    res_create = res_create_raw.json()
+    
     creation_id = res_create.get('id')
     
     if not creation_id:
-        print("Meta rejected the video upload:", res_create)
+        print("Meta rejected the video upload container.")
+        sheet_queue.update_cell(job_row, 2, "IG_REJECTED")
     else:
         print(f"Container created ({creation_id}). Waiting for Meta to process audio/video...")
         time.sleep(60) # Wait 60 seconds for Instagram's servers to process the file
@@ -243,17 +276,19 @@ try:
             'creation_id': creation_id,
             'access_token': META_TOKEN
         }
-        res_publish = requests.post(url_publish, data=payload_publish).json()
+        res_publish_raw = requests.post(url_publish, data=payload_publish)
+        print("Meta Raw Response (Publish):", res_publish_raw.text)
+        res_publish = res_publish_raw.json()
         
         if 'id' in res_publish:
             print("SUCCESS! 🚀 Reel published to Instagram!")
             sheet_queue.update_cell(job_row, 2, "PUBLISHED")
         else:
-            print("Error publishing:", res_publish)
-            sheet_queue.update_cell(job_row, 2, "IG_ERROR")
+            print("Error publishing the container.")
+            sheet_queue.update_cell(job_row, 2, "IG_PUBLISH_ERROR")
 
 except Exception as e:
-    print(f"Instagram upload failed: {e}")
-    sheet_queue.update_cell(job_row, 2, "VIDEO_READY_NO_IG")
+    print(f"Pipeline failed at Phase E: {e}")
+    sheet_queue.update_cell(job_row, 2, "PHASE_E_ERROR")
 
 print("Pipeline Complete. Going back to sleep.")
