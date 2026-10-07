@@ -195,30 +195,30 @@ try:
     
 
 # 1. Upload the video to Cloudinary so Meta can access it publicly
-import time
-import cloudinary
-import cloudinary.uploader
+    import time
+    import cloudinary
+    import cloudinary.uploader
 
-print("Uploading Reel to Cloudinary...")
+    print("Uploading Reel to Cloudinary...")
 
-cloudinary.config(
-    cloud_name=os.environ['CLOUDINARY_CLOUD_NAME'].strip(),
-    api_key=os.environ['CLOUDINARY_API_KEY'].strip(),
-    api_secret=os.environ['CLOUDINARY_API_SECRET'].strip()
-)
+    cloudinary.config(
+        cloud_name=os.environ['CLOUDINARY_CLOUD_NAME'].strip(),
+        api_key=os.environ['CLOUDINARY_API_KEY'].strip(),
+        api_secret=os.environ['CLOUDINARY_API_SECRET'].strip()
+    )
 
-upload_result = cloudinary.uploader.upload(
-    "shayaar_reel.mp4",
-    resource_type="video"
-)
+    upload_result = cloudinary.uploader.upload(
+        "shayaar_reel.mp4",
+        resource_type="video"
+    )
 
-video_url = upload_result.get("secure_url")
+    video_url = upload_result.get("secure_url")
 
-if not video_url:
-    raise Exception("Cloudinary upload failed: no secure URL returned.")
+    if not video_url:
+        raise Exception("Cloudinary upload failed: no secure URL returned.")
 
-print(f"Cloudinary upload successful!")
-print(f"Video URL: {video_url}")
+    print(f"Cloudinary upload successful!")
+    print(f"Video URL: {video_url}")
     
     # 2. Tell Instagram to download it as a Reel
     print("Sending Reel to Instagram...")
