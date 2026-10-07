@@ -27,6 +27,9 @@ jobs:
           GOOGLE_JSON: ${{ secrets.GOOGLE_JSON }}
           META_TOKEN: ${{ secrets.META_TOKEN }}
           INSTA_ID: ${{ secrets.INSTA_ID }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: python main.py
 
       - name: Save the Reel for me to download
