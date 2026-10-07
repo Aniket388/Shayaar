@@ -193,36 +193,32 @@ try:
     META_TOKEN = os.environ['META_TOKEN'].strip()
     INSTA_ID = os.environ['INSTA_ID'].strip()
     
-    # 1. Host the video temporarily so Meta can see it (WITH BULLETPROOF RETRY)
-    import time
-    print("Uploading to Catbox for Meta...")
-    video_url = None
-    
-    for attempt in range(3):
-        try:
-            print(f"Upload attempt {attempt+1}...")
-            with open('shayaar_reel.mp4', 'rb') as f:
-                files = {
-                    'reqtype': (None, 'fileupload'),
-                    'fileToUpload': f
-                }
-                res = requests.post('https://catbox.moe/user/api.php', files=files)
-                url = res.text.strip()
 
-            if url.startswith("https://"):
-                video_url = url
-                print(f"Success! Video hosted at: {video_url}")
-                break
-            else:
-                print(f"Invalid response from Catbox: {url}")
-                
-        except Exception as e:
-            print(f"Catbox upload exception, retrying... Error: {e}")
-            
-        time.sleep(5)
+# 1. Upload the video to Cloudinary so Meta can access it publicly
+import time
+import cloudinary
+import cloudinary.uploader
 
-    if not video_url:
-        raise Exception("Catbox upload failed completely after 3 retries. Aborting.")
+print("Uploading Reel to Cloudinary...")
+
+cloudinary.config(
+    cloud_name=os.environ['CLOUDINARY_CLOUD_NAME'].strip(),
+    api_key=os.environ['CLOUDINARY_API_KEY'].strip(),
+    api_secret=os.environ['CLOUDINARY_API_SECRET'].strip()
+)
+
+upload_result = cloudinary.uploader.upload(
+    "shayaar_reel.mp4",
+    resource_type="video"
+)
+
+video_url = upload_result.get("secure_url")
+
+if not video_url:
+    raise Exception("Cloudinary upload failed: no secure URL returned.")
+
+print(f"Cloudinary upload successful!")
+print(f"Video URL: {video_url}")
     
     # 2. Tell Instagram to download it as a Reel
     print("Sending Reel to Instagram...")
