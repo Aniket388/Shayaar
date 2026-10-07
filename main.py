@@ -243,7 +243,7 @@ print(f"Video URL: {video_url}")
     chosen_hook = random.choice(hooks)
     caption = f"{chosen_hook}\n\n#shayari #poetry #ghalib #jaunelia #quotes #urdupoetry #deepquotes #lofi #shayar"
     
-    url_create = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media"
+    url_create = f"https://graph.facebook.com/v25.0/{INSTA_ID}/media"
     payload = {
         'video_url': video_url,
         'caption': caption,
@@ -267,7 +267,7 @@ print(f"Video URL: {video_url}")
         
         # 3. Publish it!
         print("Publishing to your feed...")
-        url_publish = f"https://graph.facebook.com/v19.0/{INSTA_ID}/media_publish"
+        url_publish = f"https://graph.facebook.com/v25.0/{INSTA_ID}/media_publish"
         payload_publish = {
             'creation_id': creation_id,
             'access_token': META_TOKEN
