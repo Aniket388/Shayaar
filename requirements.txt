@@ -4,3 +4,4 @@ oauth2client
 moviepy==1.0.3
 Pillow==9.5.0
 imageio-ffmpeg
+cloudinary
